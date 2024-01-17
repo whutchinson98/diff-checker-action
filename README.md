@@ -23,7 +23,6 @@ that path or not.
 - uses: whutchinson98/diff-checker-action@v1
   with:
     token: ${{ GITHUB.TOKEN }}
-    token: ${{ GITHUB.TOKEN }}
     diff: |
       all: ./*
       foo: ./test/path/*.foo
