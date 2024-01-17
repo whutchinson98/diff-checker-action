@@ -1,0 +1,12 @@
+name: 'Diff Checker Action'
+description: 'Takes a list of paths to check and outputs if they have changes'
+inputs:
+  diff:
+    description: 'Newline separated list of key:value pairs'
+    required: true
+outputs:
+  key:
+    description: 'Per item in the diff list above there will be a key that outputs a stringified boolean if the path has experienced changes or not'
+runs:
+  using: node20
+  main: dist/index.js
