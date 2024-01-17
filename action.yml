@@ -4,6 +4,9 @@ inputs:
   diff:
     description: 'Newline separated list of key:value pairs'
     required: true
+  token:
+    description: 'Github token'
+    required: true
 outputs:
   key:
     description: 'Per item in the diff list above there will be a key that outputs a stringified boolean if the path has experienced changes or not'

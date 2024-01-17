@@ -1,0 +1,79 @@
+name: test
+
+on:
+  pull_request:
+    paths-ignore:
+      ['**.md']
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: get node version
+        id: get-node-version
+        run: echo "node_version=$(cat .node-version)" >> $GITHUB_OUTPUT
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.9.2
+          run_install: false
+      - name: get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.get-node-version.outputs.node_version }}
+      - uses: actions/cache@v3
+        id: pnpm-cache
+        if: ${{ !env.ACT }}
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - run: pnpm install --frozen-lockfile
+      # - run: pnpm test
+      - run: pnpm run bundle
+      - name: compare dist
+        id: diff
+        run: |
+          if [ "$(git diff --ignore-space-at-eol --text dist/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff --ignore-space-at-eol --text dist/
+            exit 1
+          fi
+
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Local Action
+        id: test-action
+        uses: ./
+        with:
+          token: ${{ GITHUB.TOKEN }}
+          diff: |
+            all: ./*
+            foo: ./test/path/*.foo
+            bar: src/index.ts
+            baz: ./src/random_file.ts
+            bat: ./dist/*.js
+            hat: dist/*
+            cat: ./.github/**/*
+      - name: check outputs
+        run: |
+          echo "all ${{ steps.test-action.outputs.all }}"
+          echo "foo ${{ steps.test-action.outputs.foo }}"
+          echo "bar ${{ steps.test-action.outputs.bar }}"
