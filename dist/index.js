@@ -28536,8 +28536,10 @@ async function run() {
         for (const diff of diffInput.split('\n')) {
             const [key, value] = diff.split(':');
             const patterns = value.split(' ');
+            console.log('IN FOR', { key, patterns });
             diffMap[key.trimStart()] = patterns;
         }
+        console.log('DIFF MAP', diffMap);
         const octokit = (0, github_1.getOctokit)(core.getInput('token', { required: true }));
         const result = await octokit.rest.repos.compareCommits({
             base,
@@ -28560,6 +28562,7 @@ async function run() {
             for (const pattern of diffMap[key]) {
                 regexPatterns.push(pattern);
             }
+            let matches = false;
             for (const pattern of regexPatterns) {
                 const regexPattern = pattern
                     .replace('./', '')
@@ -28568,12 +28571,11 @@ async function run() {
                     .replaceAll(/\*/g, '.*');
                 const regex = new RegExp(`^${regexPattern}$`);
                 if (fileNames.some(f => regex.test(f))) {
-                    resultMap[key] = true;
+                    matches = true;
                     break;
                 }
-                resultMap[key] = fileNames.some(f => regex.test(f));
             }
-            resultMap[key] = false;
+            resultMap[key] = matches;
         }
         for (const key in resultMap) {
             core.setOutput(key, resultMap[key].toString());

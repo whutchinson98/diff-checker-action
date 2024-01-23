@@ -71,6 +71,7 @@ jobs:
             baz: src/index.ts ./src/random_file.ts
             bat: ./dist/*.js
             hat: dist/*
+            lat: test/*
       - name: check outputs
         run: |
           echo "all ${{ steps.test-action.outputs.all }}"
