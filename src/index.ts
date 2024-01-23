@@ -38,11 +38,12 @@ export async function run() {
     const { base, head } = getCommitShas();
     const diffInput = core.getInput('diff', { required: true });
 
-    const diffMap: { [name: string]: string } = {};
+    const diffMap: { [name: string]: string[] } = {};
 
     for (const diff of diffInput.split('\n')) {
       const [key, value] = diff.split(':');
-      diffMap[key.trimStart()] = value.trimStart();
+      const patterns: string[] = value.split(' ');
+      diffMap[key.trimStart()] = patterns;
     }
 
     const octokit = getOctokit(core.getInput('token', { required: true }));
@@ -67,13 +68,24 @@ export async function run() {
 
     const resultMap: { [name: string]: boolean } = {};
     for (const key in diffMap) {
-      const regexPattern = diffMap[key]
-        .replace('./', '')
-        .replaceAll(/\//g, '\\/')
-        .replaceAll(/\./g, '\\.')
-        .replaceAll(/\*/g, '.*');
-      const regex = new RegExp(`^${regexPattern}$`);
-      resultMap[key] = fileNames.some(f => regex.test(f));
+      const regexPatterns: string[] = [];
+      for (const pattern of diffMap[key]) {
+        regexPatterns.push(pattern);
+      }
+      for (const pattern of regexPatterns) {
+        const regexPattern = pattern
+          .replace('./', '')
+          .replaceAll(/\//g, '\\/')
+          .replaceAll(/\./g, '\\.')
+          .replaceAll(/\*/g, '.*');
+        const regex = new RegExp(`^${regexPattern}$`);
+        if (fileNames.some(f => regex.test(f))) {
+          resultMap[key] = true;
+          break;
+        }
+        resultMap[key] = fileNames.some(f => regex.test(f));
+      }
+      resultMap[key] = false;
     }
 
     for (const key in resultMap) {

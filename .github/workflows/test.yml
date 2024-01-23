@@ -67,11 +67,10 @@ jobs:
           diff: |
             all: ./*
             foo: ./test/path/*.foo
-            bar: src/index.ts
-            baz: ./src/random_file.ts
+            bar: ./src/random_file.ts ./.github/**/*
+            baz: src/index.ts ./src/random_file.ts
             bat: ./dist/*.js
             hat: dist/*
-            cat: ./.github/**/*
       - name: check outputs
         run: |
           echo "all ${{ steps.test-action.outputs.all }}"
