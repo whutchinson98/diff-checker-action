@@ -42,12 +42,12 @@ export async function run() {
 
     for (const diff of diffInput.split('\n')) {
       const [key, value] = diff.split(':');
-      const patterns: string[] = value.split(' ');
-      console.log('IN FOR', { key, patterns });
+      const patterns: string[] = value.split(' ').filter(p => p !== '');
+      core.debug(`creating key ${key} with patterns ${patterns}`);
       diffMap[key.trimStart()] = patterns;
     }
 
-    console.log('DIFF MAP', diffMap);
+    core.debug(`completed difference map ${diffMap}`);
 
     const octokit = getOctokit(core.getInput('token', { required: true }));
     const result = await octokit.rest.repos.compareCommits({
@@ -63,33 +63,17 @@ export async function run() {
 
     const fileNames: string[] = result.data.files?.map(f => f.filename) ?? [];
 
+    core.debug(`commit compare results ${fileNames}`);
+
+    // Early exit if we have no files
     if (fileNames.length === 0) {
       for (const key in diffMap) {
         core.setOutput(key, 'false');
       }
+      return;
     }
 
-    const resultMap: { [name: string]: boolean } = {};
-    for (const key in diffMap) {
-      const regexPatterns: string[] = [];
-      for (const pattern of diffMap[key]) {
-        regexPatterns.push(pattern);
-      }
-      let matches = false;
-      for (const pattern of regexPatterns) {
-        const regexPattern = pattern
-          .replace('./', '')
-          .replaceAll(/\//g, '\\/')
-          .replaceAll(/\./g, '\\.')
-          .replaceAll(/\*/g, '.*');
-        const regex = new RegExp(`^${regexPattern}$`);
-        if (fileNames.some(f => regex.test(f))) {
-          matches = true;
-          break;
-        }
-      }
-      resultMap[key] = matches;
-    }
+    const resultMap = check_matches(diffMap, fileNames);
 
     for (const key in resultMap) {
       core.setOutput(key, resultMap[key].toString());
@@ -97,6 +81,34 @@ export async function run() {
   } catch (error) {
     core.setFailed(error as Error);
   }
+}
+
+export function check_matches(
+  diffMap: { [name: string]: string[] },
+  fileNames: string[],
+): { [name: string]: boolean } {
+  const resultMap: { [name: string]: boolean } = {};
+  for (const key in diffMap) {
+    const regexPatterns: string[] = [];
+    for (const pattern of diffMap[key]) {
+      regexPatterns.push(pattern);
+    }
+    let matches = false;
+    for (const pattern of regexPatterns) {
+      const regexPattern = pattern
+        .replace('./', '')
+        .replaceAll(/\//g, '\\/')
+        .replaceAll(/\./g, '\\.')
+        .replaceAll(/\*/g, '.*');
+      const regex = new RegExp(`^${regexPattern}$`);
+      if (fileNames.some(f => regex.test(f))) {
+        matches = true;
+        break;
+      }
+    }
+    resultMap[key] = matches;
+  }
+  return resultMap;
 }
 
 // Run the action

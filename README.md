@@ -20,12 +20,12 @@ that path or not.
 ## Example usage
 
 ```yaml
-- uses: whutchinson98/diff-checker-action@v1.0.1
+- uses: whutchinson98/diff-checker-action@v1.0.2
   with:
     token: ${{ GITHUB.TOKEN }}
     diff: |
       all: ./*
-      foo: ./test/path/*.foo
+      foo: ./other/path/* ./test/path/*.foo
       bar: src/index.ts
       baz: ./src/random_file.ts
 ```
